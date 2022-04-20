@@ -3,7 +3,7 @@ import requests as req
 import json
 import datetime as dt
 import yaml
-import input_params as parms
+import os
 from secrets import GITHUB_TOKEN
 
 # Global variables
@@ -84,12 +84,18 @@ def get_commit_status(owner: str, repo: str, ref: str):
 
 # ------------------ Main function ------------------
 def main():
+    # Considering default repo_owner as 'argoproj' if not provided through environment variable - REPO_OWNER
+    repo_owner = ({True: os.getenv('REPO_OWNER'), False: 'argoproj'}[os.getenv('REPO_OWNER') is not None])
+    # Considering default repo_name as 'argo-cd' if not provided through environment variable - REPO_NAME
+    repo_name = ({True: os.getenv('REPO_NAME'), False: 'argo-cd'}[os.getenv('REPO_NAME') is not None])
+    # Considering default PR age as 3 if not provided through environment variable - PR_AGE
+    pr_age = ({True: int(os.getenv('PR_AGE')), False: 3}[os.getenv('PR_AGE') is not None])
     print("--------------------Listing filtered PRs--------------------------")
-    pr_list = get_open_prs(parms.REP_OWNER, parms.REPO_NAME, parms.PR_AGE)
+    pr_list = get_open_prs(repo_owner, repo_name, pr_age)
     print("------------------------------------------------------------------")
     for pr in pr_list:
         print(f"-----------------------PR-{pr.get('number')} - Commit Status -------------------------")
-        print(get_commit_status(parms.REP_OWNER, parms.REPO_NAME, pr.get("head")))
+        print(get_commit_status(repo_owner, repo_name, pr.get("head")))
         print("------------------------------------------------------------------")
 
 

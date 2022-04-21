@@ -1,9 +1,10 @@
 # ++++++++++++++++++++ GitHub REST API Client ++++++++++++++++++++
+import sys
+import os
 import requests as req
 import json
 import datetime as dt
 import yaml
-import os
 from secrets import GITHUB_TOKEN
 
 # Global variables
@@ -23,6 +24,7 @@ def get_open_prs(owner: str, repo: str, age: int):
         "Content-Type": "application/json",
         "Authorization": GITHUB_TOKEN
     }
+
     print("Requesting Github API to get PRs:")
     resp_json = req.get(url=query_url, params=params_dict, headers=headers_dict)
     print(f"Response code: {resp_json.status_code}")
@@ -90,13 +92,26 @@ def main():
     repo_name = ({True: os.getenv('REPO_NAME'), False: 'argo-cd'}[os.getenv('REPO_NAME') is not None])
     # Considering default PR age as 3 if not provided through environment variable - PR_AGE
     pr_age = ({True: int(os.getenv('PR_AGE')), False: 3}[os.getenv('PR_AGE') is not None])
-    print("--------------------Listing filtered PRs--------------------------")
-    pr_list = get_open_prs(repo_owner, repo_name, pr_age)
-    print("------------------------------------------------------------------")
-    for pr in pr_list:
-        print(f"-----------------------PR-{pr.get('number')} - Commit Status -------------------------")
-        print(get_commit_status(repo_owner, repo_name, pr.get("head")))
+
+    try:
+        print("--------------------Listing filtered PRs--------------------------")
+        pr_list = get_open_prs(repo_owner, repo_name, pr_age)
         print("------------------------------------------------------------------")
+    except req.exceptions.RequestException as req_err:
+        print(f"Error while making request to the GitHub REST API url. Details: {str(req_err)}")
+        sys.exit(1)
+    except ValueError as err:
+        print(f"Error while converting the GitHub API response into JSON objects. Details: {str(err)}")
+        sys.exit(1)
+    for pr in pr_list:
+        try:
+            print(f"-----------------------PR-{pr.get('number')} - Commit Status -------------------------")
+            print(get_commit_status(repo_owner, repo_name, pr.get("head")))
+            print("------------------------------------------------------------------")
+        except Exception as exp:
+            print(f"Error while making request to the GitHub REST API url. Details: {str(exp)}")
+            print(f"Skipping PR-{pr.get('number')} and continue with the next PR")
+            continue
 
 
 if __name__ == '__main__':
